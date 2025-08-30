@@ -2,48 +2,50 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "hello-world-react"
-        NODE_OPTIONS = "--openssl-legacy-provider"
+        APP_NAME = "hello-world-react"
+        APP_PORT = "8888"
+        REPO_URL = "https://github.com/aevitas/hello-world-react.git"
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/aevitas/hello-world-react.git'
-            }
-        }
-
-        stage('Install & Build') {
-            steps {
-                sh '''
-                    echo "===== Cài dependencies ====="
-                    npm install
-                    echo "===== Build React App ====="
-                    npm run build
-                '''
+                git branch: 'main', url: "${REPO_URL}"
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    echo "===== Build Docker Image ====="
-                    docker build -t $DOCKER_IMAGE .
-                '''
+                script {
+                    sh """
+                    docker build -t ${APP_NAME}:latest .
+                    """
+                }
             }
         }
 
         stage('Deploy Container') {
             steps {
-                sh '''
-                    echo "===== Stop container cũ nếu có ====="
-                    docker stop $DOCKER_IMAGE || true
-                    docker rm $DOCKER_IMAGE || true
+                script {
+                    // stop & remove container cũ (nếu tồn tại)
+                    sh """
+                    docker stop ${APP_NAME} || true
+                    docker rm ${APP_NAME} || true
 
-                    echo "===== Run container mới ====="
-                    docker run -d --name $DOCKER_IMAGE -p 8888:80 $DOCKER_IMAGE
-                '''
+                    // chạy container mới
+                    docker run -d -p ${APP_PORT}:80 --name ${APP_NAME} ${APP_NAME}:latest
+                    """
+                }
             }
+        }
+    }
+
+    post {
+        failure {
+            echo "❌ Build failed!"
+        }
+        success {
+            echo "✅ Deployment successful! App running on port ${APP_PORT}"
         }
     }
 }
