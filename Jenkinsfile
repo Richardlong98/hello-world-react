@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "hello-world-react"
-        APP_PORT = "8888"
+        DOCKER_IMAGE = "hello-world-react"
+        NODE_OPTIONS = "--openssl-legacy-provider"
     }
 
     stages {
@@ -13,10 +13,12 @@ pipeline {
             }
         }
 
-        stage('Build React App') {
+        stage('Install & Build') {
             steps {
                 sh '''
+                    echo "===== Cài dependencies ====="
                     npm install
+                    echo "===== Build React App ====="
                     npm run build
                 '''
             }
@@ -24,25 +26,23 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh '''
-                        docker build -t ${APP_NAME}:latest .
-                    '''
-                }
+                sh '''
+                    echo "===== Build Docker Image ====="
+                    docker build -t $DOCKER_IMAGE .
+                '''
             }
         }
 
         stage('Deploy Container') {
             steps {
-                script {
-                    sh '''
-                        # Stop container cũ nếu có
-                        docker rm -f ${APP_NAME} || true
-                        
-                        # Run container mới
-                        docker run -d --name ${APP_NAME} -p ${APP_PORT}:80 ${APP_NAME}:latest
-                    '''
-                }
+                sh '''
+                    echo "===== Stop container cũ nếu có ====="
+                    docker stop $DOCKER_IMAGE || true
+                    docker rm $DOCKER_IMAGE || true
+
+                    echo "===== Run container mới ====="
+                    docker run -d --name $DOCKER_IMAGE -p 8888:80 $DOCKER_IMAGE
+                '''
             }
         }
     }
