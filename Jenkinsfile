@@ -27,14 +27,14 @@ pipeline {
         stage('Deploy Container') {
             steps {
                 script {
-                    # stop & remove container cũ (nếu tồn tại)
-                    sh """
-                    docker stop ${APP_NAME} || true
-                    docker rm ${APP_NAME} || true
+                    echo "🛑 Stopping old container if exists..."
+                    sh "docker stop ${APP_NAME} || true"
 
-                    # chạy container mới
-                    docker run -d -p ${APP_PORT}:80 --name ${APP_NAME} ${APP_NAME}:latest
-                    """
+                    echo "🧹 Removing old container if exists..."
+                    sh "docker rm ${APP_NAME} || true"
+
+                    echo "🚀 Running new container..."
+                    sh "docker run -d -p ${APP_PORT}:80 --name ${APP_NAME} ${APP_NAME}:latest"
                 }
             }
         }
